@@ -2,6 +2,8 @@ import mysql_client as myclient
 import time
 
 class Benchmark:
+    __load_test_time = 0
+    __power_test_time = 0
     __tables = ["customer", "orders", "lineitem", "nation", "partsupp", "part", "region", "supplier"]
 
     def __init__(self, mysql_tpch, database_name):
@@ -74,11 +76,22 @@ class Benchmark:
             print("An error occurred when altering the tables:\n{0}".format(e))
 
     def load_benchmark(self):
-        start = time.time()
+        self.__load_test_time = time.time()
         self.__create_tables()
         self.__load_data()
         self.__alter_tables()
-        print("\n--- Total Load Time: {0} seconds ---".format(time.time() - start))
+        self.__load_test_time = time.time() - self.__load_test_time
+        print("\n--- Total Load Time: {0:5} seconds ---".format(self.__load_test_time))
 
     def power_benchmark(self):
+        self.__power_test_time = time.time()
         
+        i = 1
+        while i <= 3:
+            print("Running Query {0}\n".format(i))
+            sql = open("queries/{0}.sql".format(i), 'r').read().split(';')[0]
+            self.__database.run_command(sql)
+            i = i + 1
+        
+        self.__power_test_time = time.time() - self.__power_test_time
+        print("\n--- Total Load Time: {0:5} seconds ---".format(self.__power_test_time))
