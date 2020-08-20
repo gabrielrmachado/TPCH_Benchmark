@@ -79,3 +79,6 @@ class Benchmark:
         self.__load_data()
         self.__alter_tables()
         print("\n--- Total Load Time: {0} seconds ---".format(time.time() - start))
+
+    def power_benchmark(self):
+        
