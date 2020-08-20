@@ -37,7 +37,9 @@ class Benchmark:
         try:           
             for t in self.__tables:
                 print("Loading table {0}".format(t))
-                self.__database.run_command("LOAD DATA LOCAL INFILE '/tpch_data/{0}.tbl' INTO TABLE {1} FIELDS TERMINATED BY '|';".format(t, t.upper()))
+                s = "LOAD DATA LOCAL INFILE 'tpch_data/{0}.tbl' INTO TABLE {1} FIELDS TERMINATED BY '|';".format(t, t.upper())
+                print("Running {0}".format(s))
+                self.__database.run_command(s)
             print("Tables loaded successfully!")
 
         except Exception as e:

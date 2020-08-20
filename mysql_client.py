@@ -2,7 +2,7 @@ import mysql.connector as mysql
 
 class MySQL_TPCH:    
     def __init__(self, host, user, password):
-      self.__db_conf = mysql.connect(host = host, user = user, password = password)
+      self.__db_conf = mysql.connect(host = host, user = user, password = password, allow_local_infile = True)
 
     def connect_database(self, database_name):
       self.__cursor = self.__db_conf.cursor()
