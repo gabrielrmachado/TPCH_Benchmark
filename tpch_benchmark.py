@@ -67,6 +67,7 @@ class Benchmark:
 
         try: 
             for c in commands:
+                print("Running command {0}".format(c))
                 self.__database.run_command(c)
             print("Tables altered successfully!")
         except Exception as e:
@@ -77,4 +78,4 @@ class Benchmark:
         self.__create_tables()
         self.__load_data()
         self.__alter_tables()
-        print("\n--- Total Load time: {0} seconds ---".format(time.time() - start))
+        print("\n--- Total Load Time: {0} seconds ---".format(time.time() - start))
