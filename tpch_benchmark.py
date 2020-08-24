@@ -49,7 +49,7 @@ class Benchmark:
         ]
         try:
             for i in range(len(commands)):
-                if i < 8: print("Creating table {0}".format(self.__tables[i]))
+                if i < 8: print("\nCreating table {0}".format(self.__tables[i]))
                 self.__database.run_command(commands[i])
             print("Tables created successfully!")
 
@@ -59,8 +59,8 @@ class Benchmark:
     def __load_data(self):        
         try:           
             for t in self.__tables:
-                print("Loading table {0}".format(t))
-                s = "LOAD DATA LOCAL INFILE 'tpch_data/{0}.tbl' INTO TABLE {1} FIELDS TERMINATED BY '|';".format(t, t.upper())
+                print("\nLoading table {0}".format(t))
+                s = "LOAD DATA LOCAL INFILE 'dbgen/{0}.tbl' INTO TABLE {1} FIELDS TERMINATED BY '|';".format(t, t.upper())
                 print("Running {0}".format(s))
                 self.__database.run_command(s)
             print("Tables loaded successfully!\n")
@@ -92,7 +92,7 @@ class Benchmark:
 
         try: 
             for c in commands:
-                print("Running command {0}".format(c))
+                print("\nRunning command {0}".format(c))
                 self.__database.run_command(c)
             print("Tables altered successfully!")
         except Exception as e:
@@ -106,11 +106,11 @@ class Benchmark:
         self.__load_test_time = time.time() - self.__load_test_time
         print("\n--- Total Load Time: {0:5} seconds ---".format(self.__load_test_time))
 
-    def power_benchmark(self, sf):
+    def power_benchmark(self):
         self.__power_test_time = time.time()
         
         i = 1
-        self.__database.run_command("call refresh_function1({0});".format(sf))
+        self.__database.run_command("call refresh_function1({0});".format(self.__sf))
 
         while i <= 22:
             print("Running Query {0}\n".format(i))
@@ -118,7 +118,7 @@ class Benchmark:
             self.__database.run_command(sql)
             i = i + 1
             
-        self.__database.run_command("call refresh_function2({0});".format(sf))
+        self.__database.run_command("call refresh_function2({0});".format(self.__sf))
 
         self.__power_test_time = time.time() - self.__power_test_time
         print("\n--- Total Load Time: {0:5} seconds ---".format(self.__power_test_time))
