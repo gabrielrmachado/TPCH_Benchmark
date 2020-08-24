@@ -72,24 +72,23 @@ class Benchmark:
 
     def __alter_tables(self):
         commands = [
-            "CREATE PROCEDURE `refresh_function1` (sf float) BEGIN declare iterations1 int default 0; declare iterations2 int default 0; declare i int default 0; declare j int default 0; set iterations1 = floor(1500 * sf); while i < iterations1 do UPDATE ORDERS SET O_ORDERSTATUS = 'O', O_TOTALPRICE = 20000.00, O_ORDERDATE = '1996-12-06', O_ORDERPRIORITY = '5-LOW', O_CLERK = 'Clerk#000000616', O_SHIPPRIORITY = 0, O_COMMENT = 'ly special requests' WHERE O_ORDERKEY = FLOOR(RAND()* (140000-1)+1); set iterations2 = floor(RAND() * (7-1)+1); while j < iterations2 do UPDATE CUSTOMER SET C_NAME = 'Customer#00000000663', C_ADDRESS = 'IVhzIApeRb ot,c,E', C_NATIONKEY = 12, C_PHONE = '25-989-741-2988', C_ACCTBAL = 711.56, C_MKTSEGMENT = 'BUILDING', C_COMMENT = 'to the even, regular platelets. regular, ironic epitaphs nag e' where C_CUSTKEY = FLOOR(RAND()* (14000-1)+1); set j = j + 1; end while; set i = i + 1; end while; END",
-            "CREATE PROCEDURE `refresh_function2`(sf float) BEGIN declare i int default 1; declare iterations int default floor(1500 * sf); while i < iterations do delete from LINEITEM where L_ORDERKEY = i; delete from ORDERS where O_ORDERKEY = i; set i = i + 1; end while; END;",
-            "ALTER TABLE REGION ADD PRIMARY KEY (R_REGIONKEY)",
+            "CREATE PROCEDURE `refresh_function1`(sf float) BEGIN declare iterations1 int default 0; declare iterations2 int default 0; declare i int default 0; declare j int default 0; declare order_key bigint default 0; set iterations1 = floor(1500 * sf); while i < iterations1 do set order_key = FLOOR(RAND()* (FLOOR(1500 * sf)-1)+1); insert into ORDERS (O_ORDERKEY, O_ORDERSTATUS, O_TOTALPRICE, O_ORDERDATE, O_ORDERPRIORITY, O_CLERK, O_SHIPPRIORITY, O_COMMENT) values (order_key, 'O', 20000.00, '1996-12-06', '5-LOW', 'Clerk#000000616', 0, 'ly special requests'); set iterations2 = floor(RAND() * (7-1)+1); while j < iterations2 do insert into LINEITEM (L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT) values (order_key, 214, 371, 1, 32.00, 12569.41, 0.08, 0.03, 'N', 'O', 1998-07-27, 1998-08-22, 'NONE', 'TRUCK', 'riously. regular, express dep'); set j = j + 1; end while; set i = i + 1; end while; END" "CREATE PROCEDURE `refresh_function1` (sf float) BEGIN declare iterations1 int default 0; declare iterations2 int default 0; declare i int default 0; declare j int default 0; set iterations1 = floor(1500 * sf); while i < iterations1 do UPDATE ORDERS SET O_ORDERSTATUS = 'O', O_TOTALPRICE = 20000.00, O_ORDERDATE = '1996-12-06', O_ORDERPRIORITY = '5-LOW', O_CLERK = 'Clerk#000000616', O_SHIPPRIORITY = 0, O_COMMENT = 'ly special requests' WHERE O_ORDERKEY = FLOOR(RAND()* (140000-1)+1); set iterations2 = floor(RAND() * (7-1)+1); while j < iterations2 do UPDATE CUSTOMER SET C_NAME = 'Customer#00000000663', C_ADDRESS = 'IVhzIApeRb ot,c,E', C_NATIONKEY = 12, C_PHONE = '25-989-741-2988', C_ACCTBAL = 711.56, C_MKTSEGMENT = 'BUILDING', C_COMMENT = 'to the even, regular platelets. regular, ironic epitaphs nag e' where C_CUSTKEY = FLOOR(RAND()* (14000-1)+1); set j = j + 1; end while; set i = i + 1; end while; END", 
+            "CREATE PROCEDURE `refresh_function2`(sf float) BEGIN declare i int default 1; declare iterations int default floor(1500 * sf); while i < iterations do delete from LINEITEM where L_ORDERKEY = i; delete from ORDERS where O_ORDERKEY = i; set i = i + 1; end while; END;", "ALTER TABLE REGION ADD PRIMARY KEY (R_REGIONKEY)",
             "ALTER TABLE NATION ADD PRIMARY KEY (N_NATIONKEY)",
             "ALTER TABLE ORDERS ADD PRIMARY KEY (O_ORDERKEY)",
-            "ALTER TABLE NATION ADD FOREIGN KEY NATION_FK1 (N_REGIONKEY) references REGION(R_REGIONKEY)",
+            "ALTER TABLE NATION ADD FOREIGN KEY NATION_FK1 (N_REGIONKEY) references REGION(R_REGIONKEY) ON DELETE CASCADE ON UPDATE CASCADE",
             "ALTER TABLE PART ADD PRIMARY KEY (P_PARTKEY)",
             "ALTER TABLE SUPPLIER ADD PRIMARY KEY (S_SUPPKEY)",
-            "ALTER TABLE SUPPLIER ADD FOREIGN KEY SUPPLIER_FK1 (S_NATIONKEY) references NATION(N_NATIONKEY)",
+            "ALTER TABLE SUPPLIER ADD FOREIGN KEY SUPPLIER_FK1 (S_NATIONKEY) references NATION(N_NATIONKEY) ON DELETE CASCADE ON UPDATE CASCADE",
             "ALTER TABLE PARTSUPP ADD PRIMARY KEY (PS_PARTKEY,PS_SUPPKEY)",
             "ALTER TABLE CUSTOMER ADD PRIMARY KEY (C_CUSTKEY)",
-            "ALTER TABLE CUSTOMER ADD FOREIGN KEY CUSTOMER_FK1 (C_NATIONKEY) references NATION(N_NATIONKEY)",
+            "ALTER TABLE CUSTOMER ADD FOREIGN KEY CUSTOMER_FK1 (C_NATIONKEY) references NATION(N_NATIONKEY) ON DELETE CASCADE ON UPDATE CASCADE",
             "ALTER TABLE LINEITEM ADD PRIMARY KEY (L_ORDERKEY,L_LINENUMBER)",
-            "ALTER TABLE PARTSUPP ADD FOREIGN KEY PARTSUPP_FK1 (PS_SUPPKEY) references SUPPLIER(S_SUPPKEY)",
-            "ALTER TABLE PARTSUPP ADD FOREIGN KEY PARTSUPP_FK2 (PS_PARTKEY) references PART(P_PARTKEY)",
-            "ALTER TABLE ORDERS ADD FOREIGN KEY ORDERS_FK1 (O_CUSTKEY) references CUSTOMER(C_CUSTKEY)",
-            "ALTER TABLE LINEITEM ADD FOREIGN KEY LINEITEM_FK1 (L_ORDERKEY)  references ORDERS(O_ORDERKEY)",
-            "ALTER TABLE LINEITEM ADD FOREIGN KEY LINEITEM_FK2 (L_PARTKEY,L_SUPPKEY) references PARTSUPP(PS_PARTKEY, PS_SUPPKEY)",
+            "ALTER TABLE PARTSUPP ADD FOREIGN KEY PARTSUPP_FK1 (PS_SUPPKEY) references SUPPLIER(S_SUPPKEY) ON DELETE CASCADE ON UPDATE CASCADE",
+            "ALTER TABLE PARTSUPP ADD FOREIGN KEY PARTSUPP_FK2 (PS_PARTKEY) references PART(P_PARTKEY) ON DELETE CASCADE ON UPDATE CASCADE",
+            "ALTER TABLE ORDERS ADD FOREIGN KEY ORDERS_FK1 (O_CUSTKEY) references CUSTOMER(C_CUSTKEY) ON DELETE CASCADE ON UPDATE CASCADE",
+            "ALTER TABLE LINEITEM ADD FOREIGN KEY LINEITEM_FK1 (L_ORDERKEY) references ORDERS(O_ORDERKEY) ON DELETE CASCADE ON UPDATE CASCADE",
+            "ALTER TABLE LINEITEM ADD FOREIGN KEY LINEITEM_FK2 (L_PARTKEY,L_SUPPKEY) references PARTSUPP(PS_PARTKEY, PS_SUPPKEY) ON DELETE CASCADE ON UPDATE CASCADE",
         ]
 
         try: 
@@ -114,6 +113,7 @@ class Benchmark:
         i = 1
         self.__database.run_command("call refresh_function1({0});".format(self.__sf))
 
+        # while i <= 22:
         while i <= 2:
             print("Running Query {0}\n".format(i))
             sql = open("queries/{0}.sql".format(i), 'r').read().split(';')[0]
