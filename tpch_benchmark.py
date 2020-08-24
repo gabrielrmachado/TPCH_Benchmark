@@ -1,18 +1,40 @@
 import mysql_client as myclient
 import time
+from os import system
+from os import chdir
 
 class Benchmark:
     __load_test_time = 0
     __power_test_time = 0
     __tables = ["customer", "orders", "lineitem", "nation", "partsupp", "part", "region", "supplier"]
 
-    def __init__(self, mysql_tpch, database_name):
+    def __init__(self, mysql_tpch, sf = 0):
+        """
+        Creates a new TPC-H benchmark instance. If necessary, it also makes use of DBGEN to generate TPC-H dummy data.
+
+        Attributes
+        ----------
+
+        mysql_tpch : mysql_client
+            A mysql_client object containing all the connection setup for the TPC-H database;
+        sf : float
+            If a value different from 0 is provided, DBGEN is summoned to generate dummy data.
+            SF values are related to the database size. For instance: A SF of 1 will generate 1GB of dummy data, while a SF of 0.1 will generate 100MB of dumy data.
+
+        """
+        self.__sf = sf
         self.__database = mysql_tpch
-        r = self.__database.connect_database(database_name)
+
+        r = self.__database.connect_database(self.__database.database_name)
+
+        if sf != 0:
+            print("Generating {0}GB of dummy data...\n".format(sf))
+            chdir("dbgen")
+            system("sudo ./dbgen -s {0}".format(sf))
 
         if not r:
-            self.__database.run_command("CREATE DATABASE {0}".format(database_name))
-            self.__database.run_command("USE {0}".format(database_name))
+            self.__database.run_command("CREATE DATABASE {0}".format(self.__database.database_name))
+            self.__database.run_command("USE {0}".format(self.__database.database_name))
     
     def __create_tables(self):
         commands = [
