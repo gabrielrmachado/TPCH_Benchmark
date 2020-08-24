@@ -35,6 +35,8 @@ class Benchmark:
         if not r:
             self.__database.run_command("CREATE DATABASE {0}".format(self.__database.database_name))
             self.__database.run_command("USE {0}".format(self.__database.database_name))
+
+        chdir("../")
     
     def __create_tables(self):
         commands = [
@@ -112,7 +114,7 @@ class Benchmark:
         i = 1
         self.__database.run_command("call refresh_function1({0});".format(self.__sf))
 
-        while i <= 22:
+        while i <= 2:
             print("Running Query {0}\n".format(i))
             sql = open("queries/{0}.sql".format(i), 'r').read().split(';')[0]
             self.__database.run_command(sql)
