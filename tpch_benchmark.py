@@ -41,13 +41,15 @@ class Benchmark:
                 s = "LOAD DATA LOCAL INFILE 'tpch_data/{0}.tbl' INTO TABLE {1} FIELDS TERMINATED BY '|';".format(t, t.upper())
                 print("Running {0}".format(s))
                 self.__database.run_command(s)
-            print("Tables loaded successfully!")
+            print("Tables loaded successfully!\n")
 
         except Exception as e:
             print("An error occurred when loading tables:\n{0}".format(e))
 
     def __alter_tables(self):
         commands = [
+            "CREATE PROCEDURE `refresh_function1` (sf float) BEGIN declare iterations1 int default 0; declare iterations2 int default 0; declare i int default 0; declare j int default 0; set iterations1 = floor(1500 * sf); while i < iterations1 do UPDATE ORDERS SET O_ORDERSTATUS = 'O', O_TOTALPRICE = 20000.00, O_ORDERDATE = '1996-12-06', O_ORDERPRIORITY = '5-LOW', O_CLERK = 'Clerk#000000616', O_SHIPPRIORITY = 0, O_COMMENT = 'ly special requests' WHERE O_ORDERKEY = FLOOR(RAND()* (140000-1)+1); set iterations2 = floor(RAND() * (7-1)+1); while j < iterations2 do UPDATE CUSTOMER SET C_NAME = 'Customer#00000000663', C_ADDRESS = 'IVhzIApeRb ot,c,E', C_NATIONKEY = 12, C_PHONE = '25-989-741-2988', C_ACCTBAL = 711.56, C_MKTSEGMENT = 'BUILDING', C_COMMENT = 'to the even, regular platelets. regular, ironic epitaphs nag e' where C_CUSTKEY = FLOOR(RAND()* (14000-1)+1); set j = j + 1; end while; set i = i + 1; end while; END",
+            "CREATE PROCEDURE `refresh_function2`(sf float) BEGIN declare i int default 1; declare iterations int default floor(1500 * sf); while i < iterations do delete from LINEITEM where L_ORDERKEY = i; delete from ORDERS where O_ORDERKEY = i; set i = i + 1; end while; END;",
             "ALTER TABLE REGION ADD PRIMARY KEY (R_REGIONKEY)",
             "ALTER TABLE NATION ADD PRIMARY KEY (N_NATIONKEY)",
             "ALTER TABLE ORDERS ADD PRIMARY KEY (O_ORDERKEY)",
@@ -63,9 +65,7 @@ class Benchmark:
             "ALTER TABLE PARTSUPP ADD FOREIGN KEY PARTSUPP_FK2 (PS_PARTKEY) references PART(P_PARTKEY)",
             "ALTER TABLE ORDERS ADD FOREIGN KEY ORDERS_FK1 (O_CUSTKEY) references CUSTOMER(C_CUSTKEY)",
             "ALTER TABLE LINEITEM ADD FOREIGN KEY LINEITEM_FK1 (L_ORDERKEY)  references ORDERS(O_ORDERKEY)",
-            "ALTER TABLE LINEITEM ADD FOREIGN KEY LINEITEM_FK2 (L_PARTKEY,L_SUPPKEY) references PARTSUPP(PS_PARTKEY, PS_SUPPKEY)"
-            "CREATE PROCEDURE `refresh_function1` (sf float) BEGIN declare iterations1 int default 0; declare iterations2 int default 0; declare i int default 0; declare j int default 0; set iterations1 = floor(1500 * sf); while i < iterations1 do UPDATE ORDERS SET O_ORDERSTATUS = 'O', O_TOTALPRICE = 20000.00, O_ORDERDATE = '1996-12-06', O_ORDERPRIORITY = '5-LOW', O_CLERK = 'Clerk#000000616', O_SHIPPRIORITY = 0, O_COMMENT = 'ly special requests' WHERE O_ORDERKEY = FLOOR(RAND()* (140000-1)+1); set iterations2 = floor(RAND() * (7-1)+1); while j < iterations2 do UPDATE CUSTOMER SET C_NAME = 'Customer#00000000663', C_ADDRESS = 'IVhzIApeRb ot,c,E', C_NATIONKEY = 12, C_PHONE = '25-989-741-2988', C_ACCTBAL = 711.56, C_MKTSEGMENT = 'BUILDING', C_COMMENT = 'to the even, regular platelets. regular, ironic epitaphs nag e' where C_CUSTKEY = FLOOR(RAND()* (14000-1)+1); set j = j + 1; end while; set i = i + 1; end while; END",
-            "CREATE PROCEDURE `refresh_function2`(sf float) BEGIN declare i int default 1; declare iterations int default floor(1500 * sf); while i < iterations do delete from ORDERS where O_ORDERKEY = i; delete from LINEITEM where L_ORDERKEY = i; set i = i + 1; end while; END;"
+            "ALTER TABLE LINEITEM ADD FOREIGN KEY LINEITEM_FK2 (L_PARTKEY,L_SUPPKEY) references PARTSUPP(PS_PARTKEY, PS_SUPPKEY)",
         ]
 
         try: 
@@ -84,15 +84,19 @@ class Benchmark:
         self.__load_test_time = time.time() - self.__load_test_time
         print("\n--- Total Load Time: {0:5} seconds ---".format(self.__load_test_time))
 
-    def power_benchmark(self):
+    def power_benchmark(self, sf):
         self.__power_test_time = time.time()
         
         i = 1
+        self.__database.run_command("call refresh_function1({0});".format(sf))
+
         while i <= 22:
             print("Running Query {0}\n".format(i))
             sql = open("queries/{0}.sql".format(i), 'r').read().split(';')[0]
             self.__database.run_command(sql)
             i = i + 1
-        
+            
+        self.__database.run_command("call refresh_function2({0});".format(sf))
+
         self.__power_test_time = time.time() - self.__power_test_time
         print("\n--- Total Load Time: {0:5} seconds ---".format(self.__power_test_time))
