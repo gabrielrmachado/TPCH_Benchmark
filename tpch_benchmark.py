@@ -46,8 +46,8 @@ class Benchmark:
             "CREATE TABLE SUPPLIER (S_SUPPKEY INTEGER NOT NULL, S_NAME CHAR(25) NOT NULL, S_ADDRESS VARCHAR(40) NOT NULL, S_NATIONKEY INTEGER NOT NULL, S_PHONE CHAR(15) NOT NULL, S_ACCTBAL DECIMAL(15,2) NOT NULL, S_COMMENT VARCHAR(101) NOT NULL)",
             "CREATE TABLE PARTSUPP (PS_PARTKEY INTEGER NOT NULL, PS_SUPPKEY INTEGER NOT NULL, PS_AVAILQTY INTEGER NOT NULL, PS_SUPPLYCOST DECIMAL(15,2) NOT NULL, PS_COMMENT VARCHAR(199) NOT NULL)",
             "CREATE TABLE CUSTOMER (C_CUSTKEY INTEGER NOT NULL, C_NAME VARCHAR(25) NOT NULL, C_ADDRESS VARCHAR(40) NOT NULL, C_NATIONKEY INTEGER NOT NULL, C_PHONE CHAR(15) NOT NULL, C_ACCTBAL DECIMAL(15,2) NOT NULL, C_MKTSEGMENT CHAR(10) NOT NULL, C_COMMENT VARCHAR(117) NOT NULL)",
-            "CREATE TABLE ORDERS (O_ORDERKEY INTEGER NOT NULL, O_CUSTKEY INTEGER NOT NULL, O_ORDERSTATUS CHAR(1) NOT NULL, O_TOTALPRICE DECIMAL(15,2) NOT NULL, O_ORDERDATE DATE NOT NULL, O_ORDERPRIORITY CHAR(15) NOT NULL, O_CLERK CHAR(15) NOT NULL, O_SHIPPRIORITY INTEGER NOT NULL, O_COMMENT VARCHAR(79) NOT NULL)",
-            "CREATE TABLE LINEITEM (L_ORDERKEY INTEGER NOT NULL, L_PARTKEY INTEGER NOT NULL, L_SUPPKEY INTEGER NOT NULL, L_LINENUMBER INTEGER NOT NULL, L_QUANTITY DECIMAL(15,2) NOT NULL, L_EXTENDEDPRICE DECIMAL(15,2) NOT NULL, L_DISCOUNT DECIMAL(15,2) NOT NULL, L_TAX DECIMAL(15,2) NOT NULL, L_RETURNFLAG CHAR(1) NOT NULL, L_LINESTATUS CHAR(1) NOT NULL, L_SHIPDATE DATE NOT NULL, L_COMMITDATE DATE NOT NULL, L_RECEIPTDATE DATE NOT NULL, L_SHIPINSTRUCT CHAR(25) NOT NULL, L_SHIPMODE CHAR(10) NOT NULL, L_COMMENT VARCHAR(44) NOT NULL)",
+            "CREATE TABLE ORDERS (O_ORDERKEY BIGINT UNSIGNED NOT NULL, O_CUSTKEY INTEGER NOT NULL, O_ORDERSTATUS CHAR(1) NOT NULL, O_TOTALPRICE DECIMAL(15,2) NOT NULL, O_ORDERDATE DATE NOT NULL, O_ORDERPRIORITY CHAR(15) NOT NULL, O_CLERK CHAR(15) NOT NULL, O_SHIPPRIORITY INTEGER NOT NULL, O_COMMENT VARCHAR(79) NOT NULL)",
+            "CREATE TABLE LINEITEM (L_ORDERKEY BIGINT UNSIGNED NOT NULL, L_PARTKEY INTEGER NOT NULL, L_SUPPKEY INTEGER NOT NULL, L_LINENUMBER INTEGER NOT NULL, L_QUANTITY DECIMAL(15,2) NOT NULL, L_EXTENDEDPRICE DECIMAL(15,2) NOT NULL, L_DISCOUNT DECIMAL(15,2) NOT NULL, L_TAX DECIMAL(15,2) NOT NULL, L_RETURNFLAG CHAR(1) NOT NULL, L_LINESTATUS CHAR(1) NOT NULL, L_SHIPDATE DATE NOT NULL, L_COMMITDATE DATE NOT NULL, L_RECEIPTDATE DATE NOT NULL, L_SHIPINSTRUCT CHAR(25) NOT NULL, L_SHIPMODE CHAR(10) NOT NULL, L_COMMENT VARCHAR(44) NOT NULL)",
         ]
         try:
             for i in range(len(commands)):
@@ -72,11 +72,11 @@ class Benchmark:
 
     def __alter_tables(self):
         commands = [
-            "CREATE PROCEDURE `refresh_function1`(sf float) BEGIN declare iterations1 int default 0; declare iterations2 int default 0; declare i int default 0; declare j int default 0; declare order_key bigint default 0; set iterations1 = floor(1500 * sf); START TRANSACTION; while i < iterations1 do set order_key = FLOOR(RAND()* (FLOOR(2500 * sf)-(1501 * sf))+(1501 * sf)); insert into ORDERS (O_ORDERKEY, O_CUSTKEY, O_ORDERSTATUS, O_TOTALPRICE, O_ORDERDATE, O_ORDERPRIORITY, O_CLERK, O_SHIPPRIORITY, O_COMMENT) values (order_key, 7801, 'O', 20000.00, '1996-12-06', '5-LOW', 'Clerk#000000616', 0, 'ly special requests'); set iterations2 = floor(RAND() * (7-1)+1); while j < iterations2 do insert into LINEITEM (L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT) values (order_key, 214, 371, 1, 32.00, 12569.41, 0.08, 0.03, 'N', 'O', 1998-07-27, 1998-08-22, 1998-08-26, 'NONE', 'TRUCK', 'riously. regular, express dep'); set j = j + 1; end while; set i = i + 1; end while; COMMIT; END",
+            "CREATE PROCEDURE `refresh_function1`(sf float) BEGIN declare iterations1 int default 0; declare iterations2 int default 0; declare i int default 0; declare j int default 0; declare order_key bigint default 0; declare total decimal (15,2) default 20000.00; set iterations1 = floor(1500 * sf); START TRANSACTION; set total = total + 0.01; while i < iterations1 do set order_key = FLOOR(FLOOR(RAND()*(999999999-(1500*sf)+1))+(1500*sf)); insert into ORDERS (O_CUSTKEY, O_ORDERSTATUS, O_TOTALPRICE, O_ORDERDATE, O_ORDERPRIORITY, O_CLERK, O_SHIPPRIORITY, O_COMMENT) values (7801, 'O', total, '1996-12-06', '5-LOW', 'Clerk#000000616', 0, 'ly special requests'); set iterations2 = floor(RAND() * (7-1)+1); while j < iterations2 do insert into LINEITEM (L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT) values ((select O_ORDERKEY from ORDERS where O_CUSTKEY = 7801 AND O_ORDERSTATUS = 'O' AND O_TOTALPRICE = total AND O_ORDERDATE = '1996-12-06' AND O_ORDERPRIORITY = '5-LOW' AND O_CLERK = 'Clerk#000000616' AND O_SHIPPRIORITY = 0 AND O_COMMENT = 'ly special requests' LIMIT 1), 15519, 785, 1, 32.00, 12569.41, 0.08, 0.03, 'N', 'O', 1998-07-27, 1998-08-22, 1998-08-26, 'NONE', 'TRUCK', 'riously. regular, express dep'); set j = j + 1; end while; set i = i + 1; end while; COMMIT; END",
             "CREATE PROCEDURE `refresh_function2`(sf float) BEGIN declare i int default 1; declare iterations int default floor(1500 * sf); START TRANSACTION; while i < iterations do delete from LINEITEM where L_ORDERKEY = i; delete from ORDERS where O_ORDERKEY = i; set i = i + 1; end while; COMMIT; END;", 
             "ALTER TABLE REGION ADD PRIMARY KEY (R_REGIONKEY)",
             "ALTER TABLE NATION ADD PRIMARY KEY (N_NATIONKEY)",
-            "ALTER TABLE ORDERS ADD PRIMARY KEY (O_ORDERKEY)",
+            "ALTER TABLE ORDERS MODIFY O_ORDERKEY BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY",
             "ALTER TABLE NATION ADD FOREIGN KEY NATION_FK1 (N_REGIONKEY) references REGION(R_REGIONKEY) ON DELETE CASCADE ON UPDATE CASCADE",
             "ALTER TABLE PART ADD PRIMARY KEY (P_PARTKEY)",
             "ALTER TABLE SUPPLIER ADD PRIMARY KEY (S_SUPPKEY)",
@@ -109,7 +109,6 @@ class Benchmark:
         print("\n--- Total Load Time: {0:5} seconds ---".format(self.__load_test_time))
 
     def power_benchmark(self):
-        self.__database.run_command("SET foreign_key_checks = 0;")
         self.__power_test_time = time.time()
         
         i = 1
@@ -123,7 +122,6 @@ class Benchmark:
             i = i + 1
             
         self.__database.run_command("call refresh_function2({0});".format(self.__sf))
-        self.__database.run_command("SET foreign_key_checks = 1;")
 
         self.__power_test_time = time.time() - self.__power_test_time
         print("\n--- Total Load Time: {0:5} seconds ---".format(self.__power_test_time))
