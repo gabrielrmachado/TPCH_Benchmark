@@ -72,7 +72,7 @@ class Benchmark:
 
     def __alter_tables(self):
         commands = [
-            "CREATE PROCEDURE `refresh_function1`(sf float) BEGIN declare iterations1 int default 0; declare iterations2 int default 0; declare i int default 0; declare j int default 0; declare order_key bigint default 0; set iterations1 = floor(1500 * sf); START TRANSACTION; while i < iterations1 do set order_key = FLOOR(RAND()* (FLOOR(2500 * sf)-(1501 * sf))+(1501 * sf)); insert into ORDERS (O_ORDERKEY, O_ORDERSTATUS, O_TOTALPRICE, O_ORDERDATE, O_ORDERPRIORITY, O_CLERK, O_SHIPPRIORITY, O_COMMENT) values (order_key, 'O', 20000.00, '1996-12-06', '5-LOW', 'Clerk#000000616', 0, 'ly special requests'); set iterations2 = floor(RAND() * (7-1)+1); while j < iterations2 do insert into LINEITEM (L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT) values (order_key, 214, 371, 1, 32.00, 12569.41, 0.08, 0.03, 'N', 'O', 1998-07-27, 1998-08-22, 'NONE', 'TRUCK', 'riously. regular, express dep'); set j = j + 1; end while; set i = i + 1; end while; COMMIT; END",
+            "CREATE PROCEDURE `refresh_function1`(sf float) BEGIN declare iterations1 int default 0; declare iterations2 int default 0; declare i int default 0; declare j int default 0; declare order_key bigint default 0; set iterations1 = floor(1500 * sf); START TRANSACTION; while i < iterations1 do set order_key = FLOOR(RAND()* (FLOOR(2500 * sf)-(1501 * sf))+(1501 * sf)); insert into ORDERS (O_ORDERKEY, O_CUSTKEY, O_ORDERSTATUS, O_TOTALPRICE, O_ORDERDATE, O_ORDERPRIORITY, O_CLERK, O_SHIPPRIORITY, O_COMMENT) values (order_key, 7801, 'O', 20000.00, '1996-12-06', '5-LOW', 'Clerk#000000616', 0, 'ly special requests'); set iterations2 = floor(RAND() * (7-1)+1); while j < iterations2 do insert into LINEITEM (L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT) values (order_key, 214, 371, 1, 32.00, 12569.41, 0.08, 0.03, 'N', 'O', 1998-07-27, 1998-08-22, 'NONE', 'TRUCK', 'riously. regular, express dep'); set j = j + 1; end while; set i = i + 1; end while; COMMIT; END",
             "CREATE PROCEDURE `refresh_function2`(sf float) BEGIN declare i int default 1; declare iterations int default floor(1500 * sf); START TRANSACTION; while i < iterations do delete from LINEITEM where L_ORDERKEY = i; delete from ORDERS where O_ORDERKEY = i; set i = i + 1; end while; COMMIT; END;", 
             "ALTER TABLE REGION ADD PRIMARY KEY (R_REGIONKEY)",
             "ALTER TABLE NATION ADD PRIMARY KEY (N_NATIONKEY)",
@@ -109,6 +109,7 @@ class Benchmark:
         print("\n--- Total Load Time: {0:5} seconds ---".format(self.__load_test_time))
 
     def power_benchmark(self):
+        self.__database.run_command("SET foreign_key_checks = 0;")
         self.__power_test_time = time.time()
         
         i = 1
@@ -122,6 +123,7 @@ class Benchmark:
             i = i + 1
             
         self.__database.run_command("call refresh_function2({0});".format(self.__sf))
+        self.__database.run_command("SET foreign_key_checks = 1;")
 
         self.__power_test_time = time.time() - self.__power_test_time
         print("\n--- Total Load Time: {0:5} seconds ---".format(self.__power_test_time))
