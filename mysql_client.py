@@ -13,6 +13,8 @@ class MySQL_TPCH:
 
       if len(self.__result) == 0:
           print("Database {0} does not exist.".format(database_name))
+          # CREATE USER 'newuser'@'localhost' IDENTIFIED BY 'password';
+          # GRANT ALL PRIVILEGES ON * . * TO 'newuser'@'localhost';
           return False
       else:
           self.__cursor.execute("USE {0}".format(database_name))
