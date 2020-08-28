@@ -109,19 +109,31 @@ class Benchmark:
         print("\n--- Total Load Time: {0:5} seconds ---".format(self.__load_test_time))
 
     def power_benchmark(self):
-        self.__power_test_time = time.time()
+        self.__query_times = []
+        self.__refresh_times = []
         
         i = 1
+        running_time = time.time()
+        power_test_time = running_time
+
         self.__database.run_command("call refresh_function1({0});".format(self.__sf))
+        self.__refresh_times.append(time.time() - running_time)
 
         # while i <= 22:
         while i <= 2:
-            print("\nRunning Query {0}\n".format(i))
+            print("\nRUNNING QUERY {0}\n".format(i))
             sql = open("queries/{0}.sql".format(i), 'r').read().split(';')[0]
+            
+            running_time = time.time()
             self.__database.run_command(sql)
+            self.__query_times.append(time.time() - running_time)
+
+            print("\nQuery {0} finished after {1:.5} seconds.".format(i, self.__query_times[i-1]))
             i = i + 1
             
+        running_time = time.time()
         self.__database.run_command("call refresh_function2({0});".format(self.__sf))
+        self.__refresh_times.append(time.time() - running_time)
 
-        self.__power_test_time = time.time() - self.__power_test_time
-        print("\n--- Total Load Time: {0:5} seconds ---".format(self.__power_test_time))
+        power_test_time = time.time() - power_test_time
+        print("\n--- POWER TEST TOTAL TIME: {0:.5} seconds ---".format(power_test_time))
