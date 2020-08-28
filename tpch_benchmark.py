@@ -2,6 +2,7 @@ import mysql_client as myclient
 import time
 from os import system
 from os import chdir
+import pandas as pd
 
 class Benchmark:
     """
@@ -109,31 +110,34 @@ class Benchmark:
         print("\n--- Total Load Time: {0:5} seconds ---".format(self.__load_test_time))
 
     def power_benchmark(self):
-        self.__query_times = []
-        self.__refresh_times = []
+        self.__pwrtest_query_times = []
+        self.__pwrtest_refresh_times = []
+
+        self.__df_queries_idxs = pd.read_csv("queries/queries_rnd_idxs.csv", header=None, delim_whitespace=True)
+        idxs = self.__df_queries_idxs.loc[[0]] # The index '0' refers to 'Query Stream 00', according to TPC-H nomenclature.
         
         i = 1
         running_time = time.time()
         power_test_time = running_time
 
         self.__database.run_command("call refresh_function1({0});".format(self.__sf))
-        self.__refresh_times.append(time.time() - running_time)
+        self.__pwrtest_refresh_times.append(time.time() - running_time)
 
-        # while i <= 22:
+        # while i <= len(idxs):
         while i <= 2:
-            print("\nRUNNING QUERY {0}\n".format(i))
-            sql = open("queries/{0}.sql".format(i), 'r').read().split(';')[0]
+            print("\nRUNNING QUERY {0}\n".format(idxs[i-1].values[0]))
+            sql = open("queries/{0}.sql".format(idxs[i-1].values[0]), 'r').read().split(';')[0]
             
             running_time = time.time()
             self.__database.run_command(sql)
-            self.__query_times.append(time.time() - running_time)
+            self.__pwrtest_query_times.append(time.time() - running_time)
 
-            print("\nQuery {0} finished after {1:.5} seconds.".format(i, self.__query_times[i-1]))
+            print("\nQuery {0} finished after {1:.5} seconds.".format(idxs[i-1].values[0], self.__pwrtest_query_times[i-1]))
             i = i + 1
             
         running_time = time.time()
         self.__database.run_command("call refresh_function2({0});".format(self.__sf))
-        self.__refresh_times.append(time.time() - running_time)
+        self.__pwrtest_refresh_times.append(time.time() - running_time)
 
         power_test_time = time.time() - power_test_time
         print("\n--- POWER TEST TOTAL TIME: {0:.5} seconds ---".format(power_test_time))
