@@ -5,6 +5,7 @@ import random as rnd
 import pandas as pd
 import numpy as np
 import multiprocessing
+import threading
 import math
 
 class Benchmark:
@@ -17,8 +18,9 @@ class Benchmark:
     mysql_tpch : mysql_client
         A mysql_client object containing all the connection setup for the TPC-H database;
     sf : float
-        If a value different from 0 is provided, DBGEN is summoned to generate dummy data.
         SF values are related to the database size. For instance: A SF of 1 will generate 1GB of dummy data, while a SF of 0.1 will generate 100MB of dumy data.
+    dbgen : boolean
+        When this argument is True, dbgen is called to generate 'SF' GB of dummy data. 
 
     """
     __load_test_time = 0
@@ -27,9 +29,9 @@ class Benchmark:
 
     def __init__(self, mysql_tpch, sf = 1, dbgen=False):
         self.__sf = sf
-        self.__database = mysql_tpch
+        self.__connection = mysql_tpch
 
-        r = self.__database.connect_database(self.__database.database_name)
+        r = self.__connection.connect_database(self.__connection.database_name)
 
         if dbgen:
             print("Generating {0}GB of dummy data...\n".format(sf))
@@ -38,8 +40,8 @@ class Benchmark:
             os.chdir("../")
 
         if r == False:
-            self.__database.run_command("CREATE DATABASE {0}".format(self.__database.database_name))
-            self.__database.run_command("USE {0}".format(self.__database.database_name))
+            self.__connection.run_command("CREATE DATABASE {0}".format(self.__connection.database_name))
+            self.__connection.run_command("USE {0}".format(self.__connection.database_name))
     
     def __create_tables(self):
         commands = [
@@ -55,7 +57,7 @@ class Benchmark:
         try:
             for i in range(len(commands)):
                 if i < 8: print("\nCreating table {0}".format(self.__tables[i]))
-                self.__database.run_command(commands[i])
+                self.__connection.run_command(commands[i])
             print("Tables created successfully!")
 
         except:
@@ -67,7 +69,7 @@ class Benchmark:
                 print("\nLoading table {0}".format(t))
                 s = "LOAD DATA LOCAL INFILE 'dbgen/{0}.tbl' INTO TABLE {1} FIELDS TERMINATED BY '|';".format(t, t.upper())
                 print("Running {0}".format(s))
-                self.__database.run_command(s)
+                self.__connection.run_command(s)
             print("Tables loaded successfully!\n")
 
         except Exception as e:
@@ -98,7 +100,7 @@ class Benchmark:
         try: 
             for c in commands:
                 print("\nRunning command {0}".format(c))
-                self.__database.run_command(c)
+                self.__connection.run_command(c)
             print("Tables altered successfully!")
         except Exception as e:
             print("An error occurred when altering the tables:\n{0}".format(e))
@@ -112,14 +114,16 @@ class Benchmark:
         return (3600 / denominator) * self.__sf
 
     def load_benchmark(self):
+        print("--- BEGINING OF LOAD TEST ---")
         self.__load_test_time = time.time()
         self.__create_tables()
         self.__load_data()
         self.__alter_tables()
         self.__load_test_time = time.time() - self.__load_test_time
-        print("\n--- Total Load Time: {0:5} seconds ---".format(self.__load_test_time))
+        print("\n--- TOTAL LOAD TIME: {0:5} SECONDS ---".format(self.__load_test_time))
 
     def power_benchmark(self):
+        print("--- BEGINING OF POWER TEST ---")
         self.__pwrtest_query_times = []
         self.__pwrtest_refresh_times = []
         self.__df_queries_idxs = pd.read_csv("queries/queries_rnd_idxs.csv", header=None, delim_whitespace=True)
@@ -129,7 +133,7 @@ class Benchmark:
         running_time = time.time()
         power_test_time = running_time
 
-        self.__database.run_command("call refresh_function1({0});".format(self.__sf))
+        self.__connection.run_command("call refresh_function1({0});".format(self.__sf))
         self.__pwrtest_refresh_times.append(time.time() - running_time)
         print("\nRefresh Function 2 finished after {0:.5} seconds.".format(self.__pwrtest_refresh_times[0]))
 
@@ -139,14 +143,14 @@ class Benchmark:
             sql = open("queries/{0}.sql".format(idxs[i-1].values[0]), 'r').read().split(';')[0]
             
             running_time = time.time()
-            self.__database.run_command(sql)
+            self.__connection.run_command(sql)
             self.__pwrtest_query_times.append(time.time() - running_time)
 
             print("\nQuery {0} finished after {1:.5} seconds.".format(idxs[i-1].values[0], self.__pwrtest_query_times[i-1]))
             i = i + 1
             
         running_time = time.time()
-        self.__database.run_command("call refresh_function2({0});".format(self.__sf))
+        self.__connection.run_command("call refresh_function2({0});".format(self.__sf))
         self.__pwrtest_refresh_times.append(time.time() - running_time)
 
         print("\nRefresh Function 2 finished after {0:.5} seconds.".format(self.__pwrtest_refresh_times[1]))
@@ -155,7 +159,10 @@ class Benchmark:
         print("\n--- POWER TEST TOTAL TIME: {0:.5} seconds. ---".format(power_test_time))
         print("--- POWER@SIZE METRIC: {0:.5} ---\n".format(self.__compute_power_size_metric()))
 
+        self.__connection.close()
+
     def throughput_benchmark(self):
+        print("--- BEGINING OF THROUGHPUT TEST ---")
         num_query_streams = 0
 
         if   self.__sf < 10:                            num_query_streams = 2
@@ -169,5 +176,33 @@ class Benchmark:
         elif self.__sf >= 30000 and self.__sf < 100000: num_query_streams = 10
         elif self.__sf >= 100000:                       num_query_streams = 11
 
-        get_rnd_idxs_query_streams = rnd.sample(range(1, len(self.__df_queries_idxs)), num_query_streams)
-        print(self.__df_queries_idxs.loc[get_rnd_idxs_query_streams[0]].values)
+        rnd_query_streams_idxs = rnd.sample(range(1, len(self.__df_queries_idxs)), num_query_streams) 
+        
+        processes = []
+        for i in range(len(rnd_query_streams_idxs)):
+            p = multiprocessing.Process(target=self.__parallel_query_running, args=(rnd_query_streams_idxs[i],))
+            p.start()
+
+        for p in processes:
+            p.join()
+
+    def __parallel_query_running(self, query_stream):
+        indexes_per_query_stream = self.__df_queries_idxs.loc[query_stream, :len(self.__pwrtest_query_times)-1].values
+        print("Running queries {0} of Query Stream {1}".format(indexes_per_query_stream, query_stream+1))
+
+        con = self.__connection.get_connection_pool()
+        cursor = con.cursor()
+
+        for i in range(len(indexes_per_query_stream)):
+            sql = open("queries/{0}.sql".format(indexes_per_query_stream[i]), 'r').read().split(';')[0]
+
+            running_time = time.time()
+            self.__connection.run_command(sql, cursor)
+            running_time = time.time() - running_time
+
+            print("\n--- Query {0} of Query Stream {1} finished after {2:.5} seconds ---\n".format(indexes_per_query_stream[i], query_stream+1, running_time))
+        
+        cursor.close()
+        con.close()
+
+
