@@ -3,6 +3,8 @@ import time
 from os import system
 from os import chdir
 import pandas as pd
+import numpy as np
+import math
 
 class Benchmark:
     """
@@ -101,6 +103,14 @@ class Benchmark:
         except Exception as e:
             print("An error occurred when altering the tables:\n{0}".format(e))
 
+    def __compute_power_size_metric(self):
+        total_num_factors = len(self.__pwrtest_query_times) + len(self.__pwrtest_refresh_times)
+        query_times_prod = np.prod(self.__pwrtest_query_times)
+        refresh_times_prod = np.prod(self.__pwrtest_refresh_times)
+        denominator = math.pow(query_times_prod * refresh_times_prod, 1/total_num_factors)
+
+        return (3600 / denominator) * self.__sf
+
     def load_benchmark(self):
         self.__load_test_time = time.time()
         self.__create_tables()
@@ -122,6 +132,7 @@ class Benchmark:
 
         self.__database.run_command("call refresh_function1({0});".format(self.__sf))
         self.__pwrtest_refresh_times.append(time.time() - running_time)
+        print("\nRefresh Function 2 finished after {0:.5} seconds", self.__pwrtest_refresh_times[0])
 
         # while i <= len(idxs):
         while i <= 2:
@@ -139,5 +150,8 @@ class Benchmark:
         self.__database.run_command("call refresh_function2({0});".format(self.__sf))
         self.__pwrtest_refresh_times.append(time.time() - running_time)
 
+        print("\nRefresh Function 2 finished after {0:.5} seconds", self.__pwrtest_refresh_times[1])
+
         power_test_time = time.time() - power_test_time
         print("\n--- POWER TEST TOTAL TIME: {0:.5} seconds ---".format(power_test_time))
+        print("--- POWER@SIZE METRIC: {0:.5} ---\n".format(self.__compute_power_size_metric()))
