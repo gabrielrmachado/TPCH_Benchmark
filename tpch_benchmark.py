@@ -1,9 +1,10 @@
 import mysql_client as myclient
 import time
-from os import system
-from os import chdir
+import os
+import random as rnd
 import pandas as pd
 import numpy as np
+import multiprocessing
 import math
 
 class Benchmark:
@@ -24,22 +25,21 @@ class Benchmark:
     __power_test_time = 0
     __tables = ["customer", "orders", "lineitem", "nation", "partsupp", "part", "region", "supplier"]
 
-    def __init__(self, mysql_tpch, sf = 0):
+    def __init__(self, mysql_tpch, sf = 1, dbgen=False):
         self.__sf = sf
         self.__database = mysql_tpch
 
         r = self.__database.connect_database(self.__database.database_name)
 
-        if sf != 0:
+        if dbgen:
             print("Generating {0}GB of dummy data...\n".format(sf))
-            chdir("dbgen")
-            system("sudo ./dbgen -s {0}".format(sf))
+            os.chdir("dbgen")
+            os.system("sudo ./dbgen -s {0}".format(sf))
+            os.chdir("../")
 
         if r == False:
             self.__database.run_command("CREATE DATABASE {0}".format(self.__database.database_name))
             self.__database.run_command("USE {0}".format(self.__database.database_name))
-
-        chdir("../")
     
     def __create_tables(self):
         commands = [
@@ -122,7 +122,6 @@ class Benchmark:
     def power_benchmark(self):
         self.__pwrtest_query_times = []
         self.__pwrtest_refresh_times = []
-
         self.__df_queries_idxs = pd.read_csv("queries/queries_rnd_idxs.csv", header=None, delim_whitespace=True)
         idxs = self.__df_queries_idxs.loc[[0]] # The index '0' refers to 'Query Stream 00', according to TPC-H nomenclature.
         
@@ -132,7 +131,7 @@ class Benchmark:
 
         self.__database.run_command("call refresh_function1({0});".format(self.__sf))
         self.__pwrtest_refresh_times.append(time.time() - running_time)
-        print("\nRefresh Function 2 finished after {0:.5} seconds", self.__pwrtest_refresh_times[0])
+        print("\nRefresh Function 2 finished after {0:.5} seconds.".format(self.__pwrtest_refresh_times[0]))
 
         # while i <= len(idxs):
         while i <= 2:
@@ -150,8 +149,25 @@ class Benchmark:
         self.__database.run_command("call refresh_function2({0});".format(self.__sf))
         self.__pwrtest_refresh_times.append(time.time() - running_time)
 
-        print("\nRefresh Function 2 finished after {0:.5} seconds", self.__pwrtest_refresh_times[1])
+        print("\nRefresh Function 2 finished after {0:.5} seconds.".format(self.__pwrtest_refresh_times[1]))
 
         power_test_time = time.time() - power_test_time
-        print("\n--- POWER TEST TOTAL TIME: {0:.5} seconds ---".format(power_test_time))
+        print("\n--- POWER TEST TOTAL TIME: {0:.5} seconds. ---".format(power_test_time))
         print("--- POWER@SIZE METRIC: {0:.5} ---\n".format(self.__compute_power_size_metric()))
+
+    def throughput_benchmark(self):
+        num_query_streams = 0
+
+        if   self.__sf < 10:                            num_query_streams = 2
+        elif self.__sf >= 10 and self.__sf < 30:        num_query_streams = 3
+        elif self.__sf >= 30 and self.__sf < 100:       num_query_streams = 4
+        elif self.__sf >= 100 and self.__sf < 300:      num_query_streams = 5
+        elif self.__sf >= 300 and self.__sf < 1000:     num_query_streams = 6
+        elif self.__sf >= 1000 and self.__sf < 3000:    num_query_streams = 7
+        elif self.__sf >= 3000 and self.__sf < 10000:   num_query_streams = 8
+        elif self.__sf >= 10000 and self.__sf < 30000:  num_query_streams = 9
+        elif self.__sf >= 30000 and self.__sf < 100000: num_query_streams = 10
+        elif self.__sf >= 100000:                       num_query_streams = 11
+
+        get_rnd_idxs_query_streams = rnd.sample(range(1, len(self.__df_queries_idxs)), num_query_streams)
+        print(self.__df_queries_idxs.loc[get_rnd_idxs_query_streams[0]].values)
