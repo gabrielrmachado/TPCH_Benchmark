@@ -29,25 +29,23 @@ class MySQL_TPCH:
     def run_command(self, command, cursor = None):
       if cursor == None:
         cursor = self.__cursor
-      
-      if "15.sql" in command:
-        cursor.execute(command, multi=True)
-      else:
-        cursor.execute(command)
-
-      try:
-        result = cursor.fetchall()
-        if (len(result) > 0):
-          for r in result:
-            print(r)
-
-      except mysql.errors.InterfaceError:
-        print("Command executed without fetchs.\n")
         
-      except mysql.errors.InternalError as e:
-        if type(e).__name__ == "1213" or type(e).__name__ == "40001":
-          time.sleep(2)
-          cursor.execute(command)
+      r = cursor.execute(command, multi=True)
+
+      for res in r:
+        try:
+          result = cursor.fetchall()
+          if (len(result) > 0):
+            for r in result:
+              print(r)
+
+        except mysql.errors.InterfaceError:
+          print("Command executed without fetchs.\n")
+
+        except mysql.errors.InternalError as e:
+          if type(e).__name__ == "1213" or type(e).__name__ == "40001":
+            time.sleep(2)
+            cursor.execute(command, multi=True)
 
     def getPoolConnection(self):
       return pooling.MySQLConnectionPool(pool_size=1, pool_name="mysqlpool", host=self.__host, database=self.database_name, user=self.__user, password=self.__password).get_connection()

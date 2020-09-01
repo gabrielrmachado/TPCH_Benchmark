@@ -117,7 +117,7 @@ class Benchmark:
         return ((num_query_streams * queries_per_stream) / throughput_test_time) * 3600 * self.__sf
 
     def load_benchmark(self):
-        print("--- BEGINING OF LOAD TEST ---")
+        print("\n--- BEGINING OF LOAD TEST ---")
         self.__load_test_time = time.time()
         self.__create_tables()
         self.__load_data()
@@ -143,7 +143,7 @@ class Benchmark:
         # while i <= len(idxs.loc[0].values):
         while i <= 5:
             print("\nRUNNING QUERY {0}\n".format(idxs[i-1].values[0]))
-            sql = open("queries/{0}.sql".format(idxs[i-1].values[0]), 'r').read().split(';')[0]
+            sql = open("queries/{0}.sql".format(idxs[i-1].values[0]), 'r').readline()
             
             running_time = time.time()
             self.__connection.run_command(sql)
