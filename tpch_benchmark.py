@@ -179,10 +179,12 @@ class Benchmark:
         rnd_query_streams_idxs = rnd.sample(range(1, len(self.__df_queries_idxs)), num_query_streams) 
         
         processes = []
+        
         for i in range(len(rnd_query_streams_idxs)):
             p = multiprocessing.Process(target=self.__parallel_query_running, args=(rnd_query_streams_idxs[i],))
             p.start()
-
+            processes.append(p)
+        
         for p in processes:
             p.join()
 
@@ -190,8 +192,8 @@ class Benchmark:
         indexes_per_query_stream = self.__df_queries_idxs.loc[query_stream, :len(self.__pwrtest_query_times)-1].values
         print("Running queries {0} of Query Stream {1}".format(indexes_per_query_stream, query_stream+1))
 
-        con = self.__connection.get_connection_pool()
-        cursor = con.cursor()
+        con = self.__connection.getPoolConnection()
+        cursor = con.cursor()   
 
         for i in range(len(indexes_per_query_stream)):
             sql = open("queries/{0}.sql".format(indexes_per_query_stream[i]), 'r').read().split(';')[0]
