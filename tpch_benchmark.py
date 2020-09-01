@@ -111,7 +111,10 @@ class Benchmark:
         refresh_times_prod = np.prod(self.__pwrtest_refresh_times)
         denominator = math.pow(query_times_prod * refresh_times_prod, 1/total_num_factors)
 
-        return (3600 / denominator) * self.__sf
+        return ((3600 * self.__sf) / denominator)
+
+    def __compute_throughput_size_metric(self, num_query_streams, queries_per_stream, throughput_test_time):
+        return ((num_query_streams * queries_per_stream) / throughput_test_time) * 3600 * self.__sf
 
     def load_benchmark(self):
         print("--- BEGINING OF LOAD TEST ---")
@@ -128,17 +131,18 @@ class Benchmark:
         self.__pwrtest_refresh_times = []
         self.__df_queries_idxs = pd.read_csv("queries/queries_rnd_idxs.csv", header=None, delim_whitespace=True)
         idxs = self.__df_queries_idxs.loc[[0]] # The index '0' refers to 'Query Stream 00', according to TPC-H nomenclature.
+        print(len(idxs.loc[0].values))
         
         i = 1
         running_time = time.time()
-        power_test_time = running_time
+        self.__power_test_time = running_time
 
         self.__connection.run_command("call refresh_function1({0});".format(self.__sf))
         self.__pwrtest_refresh_times.append(time.time() - running_time)
         print("\nRefresh Function 2 finished after {0:.5} seconds.".format(self.__pwrtest_refresh_times[0]))
 
-        # while i <= len(idxs):
-        while i <= 2:
+        while i <= len(idxs.loc[0].values):
+        # while i <= 2:
             print("\nRUNNING QUERY {0}\n".format(idxs[i-1].values[0]))
             sql = open("queries/{0}.sql".format(idxs[i-1].values[0]), 'r').read().split(';')[0]
             
@@ -155,10 +159,7 @@ class Benchmark:
 
         print("\nRefresh Function 2 finished after {0:.5} seconds.".format(self.__pwrtest_refresh_times[1]))
 
-        power_test_time = time.time() - power_test_time
-        print("\n--- POWER TEST TOTAL TIME: {0:.5} seconds. ---".format(power_test_time))
-        print("--- POWER@SIZE METRIC: {0:.5} ---\n".format(self.__compute_power_size_metric()))
-
+        self.__power_test_time = time.time() - self.__power_test_time
         self.__connection.close()
 
     def throughput_benchmark(self):
@@ -176,17 +177,25 @@ class Benchmark:
         elif self.__sf >= 30000 and self.__sf < 100000: num_query_streams = 10
         elif self.__sf >= 100000:                       num_query_streams = 11
 
-        rnd_query_streams_idxs = rnd.sample(range(1, len(self.__df_queries_idxs)), num_query_streams) 
-        
+        rnd_query_streams_idxs = rnd.sample(range(1, len(self.__df_queries_idxs)), num_query_streams)         
         processes = []
+
+        self.__throughput_test_time = time.time()
         
-        for i in range(len(rnd_query_streams_idxs)):
+        for i in range(len(rnd_query_streams_idxs)): # Runs all the Query Streams in parallel by using the helper function '__parallel_query_running'.
             p = multiprocessing.Process(target=self.__parallel_query_running, args=(rnd_query_streams_idxs[i],))
             p.start()
             processes.append(p)
         
         for p in processes:
             p.join()
+        
+        self.__throughput_test_time = time.time() - self.__throughput_test_time
+
+        print("\n--- POWER TEST TOTAL TIME: {0:.5} seconds. ---".format(self.__power_test_time))
+        print("--- POWER@SIZE METRIC: {0:.5} ---\n".format(self.__compute_power_size_metric()))
+        print("--- THROUGHPUT TEST TOTAL TIME: {0:.5} seconds. ---".format(self.__throughput_test_time))
+        print("--- THROUGHPUT@SIZE METRIC: {0:.5} ---\n".format(self.__compute_throughput_size_metric(num_query_streams, len(self.__pwrtest_query_times), self.__throughput_test_time)))
 
     def __parallel_query_running(self, query_stream):
         indexes_per_query_stream = self.__df_queries_idxs.loc[query_stream, :len(self.__pwrtest_query_times)-1].values
@@ -203,7 +212,12 @@ class Benchmark:
             running_time = time.time() - running_time
 
             print("\n--- Query {0} of Query Stream {1} finished after {2:.5} seconds ---\n".format(indexes_per_query_stream[i], query_stream+1, running_time))
-        
+
+        print("\nRunning Refresh Function 1 of Query Stream {0}\n".format(query_stream+1))
+        self.__connection.run_command("call refresh_function1({0})".format(self.__sf), cursor)        
+        print("\nRunning Refresh Function 2 of Query Stream {0}\n".format(query_stream+1))
+        self.__connection.run_command("call refresh_function2({0})".format(self.__sf), cursor)        
+
         cursor.close()
         con.close()
 
