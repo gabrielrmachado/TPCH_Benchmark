@@ -123,10 +123,9 @@ class Benchmark:
         self.__load_data()
         self.__alter_tables()
         self.__load_test_time = time.time() - self.__load_test_time
-        print("\n--- TOTAL LOAD TIME: {0:5} SECONDS ---".format(self.__load_test_time))
 
     def power_benchmark(self):
-        print("--- BEGINING OF POWER TEST ---")
+        print("\n--- BEGINING OF POWER TEST ---")
         self.__pwrtest_query_times = []
         self.__pwrtest_refresh_times = []
         self.__df_queries_idxs = pd.read_csv("queries/queries_rnd_idxs.csv", header=None, delim_whitespace=True)
@@ -141,8 +140,8 @@ class Benchmark:
         self.__pwrtest_refresh_times.append(time.time() - running_time)
         print("\nRefresh Function 2 finished after {0:.5} seconds.".format(self.__pwrtest_refresh_times[0]))
 
-        while i <= len(idxs.loc[0].values):
-        # while i <= 2:
+        # while i <= len(idxs.loc[0].values):
+        while i <= 5:
             print("\nRUNNING QUERY {0}\n".format(idxs[i-1].values[0]))
             sql = open("queries/{0}.sql".format(idxs[i-1].values[0]), 'r').read().split(';')[0]
             
@@ -163,7 +162,7 @@ class Benchmark:
         self.__connection.close()
 
     def throughput_benchmark(self):
-        print("--- BEGINING OF THROUGHPUT TEST ---")
+        print("\n--- BEGINING OF THROUGHPUT TEST ---")
         num_query_streams = 0
 
         if   self.__sf < 10:                            num_query_streams = 2
@@ -192,10 +191,17 @@ class Benchmark:
         
         self.__throughput_test_time = time.time() - self.__throughput_test_time
 
-        print("\n--- POWER TEST TOTAL TIME: {0:.5} seconds. ---".format(self.__power_test_time))
-        print("--- POWER@SIZE METRIC: {0:.5} ---\n".format(self.__compute_power_size_metric()))
+        power_metric =      self.__compute_power_size_metric()
+        throughput_metric = self.__compute_throughput_size_metric(num_query_streams, len(self.__pwrtest_query_times), self.__throughput_test_time)
+
+        print("\n--- LOAD TEST TOTAL TIME: {0:.5} seconds. ---".format(self.__load_test_time))
+        print("--- POWER TEST TOTAL TIME: {0:.5} seconds. ---".format(self.__power_test_time))
+        print("--- POWER@SIZE METRIC: {0:.5} ---".format(power_metric))
         print("--- THROUGHPUT TEST TOTAL TIME: {0:.5} seconds. ---".format(self.__throughput_test_time))
-        print("--- THROUGHPUT@SIZE METRIC: {0:.5} ---\n".format(self.__compute_throughput_size_metric(num_query_streams, len(self.__pwrtest_query_times), self.__throughput_test_time)))
+        print("--- THROUGHPUT@SIZE METRIC: {0:.5} ---".format(throughput_metric))
+
+        qphH = math.pow((power_metric * throughput_metric), 0.5)
+        print("--- QphH@SIZE METRIC: {0:.5} ---\n".format(qphH))
 
     def __parallel_query_running(self, query_stream):
         indexes_per_query_stream = self.__df_queries_idxs.loc[query_stream, :len(self.__pwrtest_query_times)-1].values
@@ -214,7 +220,7 @@ class Benchmark:
             print("\n--- Query {0} of Query Stream {1} finished after {2:.5} seconds ---\n".format(indexes_per_query_stream[i], query_stream+1, running_time))
 
         print("\nRunning Refresh Function 1 of Query Stream {0}\n".format(query_stream+1))
-        self.__connection.run_command("call refresh_function1({0})".format(self.__sf), cursor)        
+        self.__connection.run_command("call refresh_function1({0})".format(self.__sf), cursor)
         print("\nRunning Refresh Function 2 of Query Stream {0}\n".format(query_stream+1))
         self.__connection.run_command("call refresh_function2({0})".format(self.__sf), cursor)        
 

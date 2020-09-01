@@ -1,5 +1,6 @@
 import mysql.connector as mysql
 from mysql.connector import pooling
+import time
 
 class MySQL_TPCH:    
     def __init__(self, host, user, password, database_name):
@@ -29,15 +30,24 @@ class MySQL_TPCH:
       if cursor == None:
         cursor = self.__cursor
       
-      cursor.execute(command)
+      if "15.sql" in command:
+        cursor.execute(command, multi=True)
+      else:
+        cursor.execute(command)
 
       try:
         result = cursor.fetchall()
         if (len(result) > 0):
           for r in result:
             print(r)
+
       except mysql.errors.InterfaceError:
         print("Command executed without fetchs.\n")
+        
+      except mysql.errors.InternalError as e:
+        if type(e).__name__ == "1213" or type(e).__name__ == "40001":
+          time.sleep(2)
+          cursor.execute(command)
 
     def getPoolConnection(self):
       return pooling.MySQLConnectionPool(pool_size=1, pool_name="mysqlpool", host=self.__host, database=self.database_name, user=self.__user, password=self.__password).get_connection()
