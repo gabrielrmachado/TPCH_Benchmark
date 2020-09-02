@@ -11,30 +11,29 @@ import math
 class Benchmark:
     """
     Creates a new TPC-H benchmark instance. If necessary, it also makes use of DBGEN to generate TPC-H dummy data.
-
     Attributes
     ----------
-
     mysql_tpch : mysql_client
         A mysql_client object containing all the connection setup for the TPC-H database;
     sf : float
         SF values are related to the database size. For instance: A SF of 1 will generate 1GB of dummy data, while a SF of 0.1 will generate 100MB of dumy data.
     dbgen : boolean
         When this argument is True, dbgen is called to generate 'SF' GB of dummy data. 
-
     """
     __load_test_time = 0
     __power_test_time = 0
     __tables = ["customer", "orders", "lineitem", "nation", "partsupp", "part", "region", "supplier"]
 
-    def __init__(self, mysql_tpch, dbgen=False):
+    def __init__(self, mysql_tpch, sf = 1, dbgen=False):
+        self.__sf = sf
         self.__connection = mysql_tpch
+
         r = self.__connection.connect_database(self.__connection.database_name)
 
         if dbgen:
-            print("Generating {0}GB of dummy data...\n".format(self.__connection.sf))
+            print("Generating {0}GB of dummy data...\n".format(sf))
             os.chdir("dbgen")
-            os.system("sudo ./dbgen -s {0}".format(self.__connection.sf))
+            os.system("sudo ./dbgen -s {0}".format(sf))
             os.chdir("../")
 
         if r == False:
@@ -109,10 +108,10 @@ class Benchmark:
         refresh_times_prod = np.prod(self.__pwrtest_refresh_times)
         denominator = math.pow(query_times_prod * refresh_times_prod, 1/total_num_factors)
 
-        return ((3600 * self.__connection.sf) / denominator)
+        return ((3600 * self.__sf) / denominator)
 
     def __compute_throughput_size_metric(self, num_query_streams, queries_per_stream, throughput_test_time):
-        return ((num_query_streams * queries_per_stream) / throughput_test_time) * 3600 * self.__connection.sf
+        return ((num_query_streams * queries_per_stream) / throughput_test_time) * 3600 * self.__sf
 
     def load_benchmark(self):
         print("\n--- BEGINING OF LOAD TEST ---")
@@ -134,7 +133,7 @@ class Benchmark:
         running_time = time.time()
         self.__power_test_time = running_time
 
-        self.__connection.run_command("call refresh_function1({0});".format(self.__connection.sf))
+        self.__connection.run_command("call refresh_function1({0});".format(self.__sf))
         self.__pwrtest_refresh_times.append(time.time() - running_time)
         print("\nRefresh Function 2 finished after {0:.5} seconds.".format(self.__pwrtest_refresh_times[0]))
 
@@ -144,19 +143,14 @@ class Benchmark:
             sql = open("queries/{0}.sql".format(idxs[i-1].values[0]), 'r').readline()
             
             running_time = time.time()
-            # ans = self.__connection.run_command(sql)            
-            
-            ans = False
-            while ans == False:
-                ans = self.__connection.run_command(sql)            
-
+            self.__connection.run_command(sql)
             self.__pwrtest_query_times.append(time.time() - running_time)
 
             print("\nQuery {0} finished after {1:.5} seconds.".format(idxs[i-1].values[0], self.__pwrtest_query_times[i-1]))
             i = i + 1
             
         running_time = time.time()
-        self.__connection.run_command("call refresh_function2({0});".format(self.__connection.sf))
+        self.__connection.run_command("call refresh_function2({0});".format(self.__sf))
         self.__pwrtest_refresh_times.append(time.time() - running_time)
 
         print("\nRefresh Function 2 finished after {0:.5} seconds.".format(self.__pwrtest_refresh_times[1]))
@@ -168,16 +162,16 @@ class Benchmark:
         print("\n--- BEGINING OF THROUGHPUT TEST ---")
         num_query_streams = 0
 
-        if   self.__connection.sf < 10:                                         num_query_streams = 2
-        elif self.__connection.sf >= 10 and self.__connection.sf < 30:          num_query_streams = 3
-        elif self.__connection.sf >= 30 and self.__connection.sf < 100:         num_query_streams = 4
-        elif self.__connection.sf >= 100 and self.__connection.sf < 300:        num_query_streams = 5
-        elif self.__connection.sf >= 300 and self.__connection.sf < 1000:       num_query_streams = 6
-        elif self.__connection.sf >= 1000 and self.__connection.sf < 3000:      num_query_streams = 7
-        elif self.__connection.sf >= 3000 and self.__connection.sf < 10000:     num_query_streams = 8
-        elif self.__connection.sf >= 10000 and self.__connection.sf < 30000:    num_query_streams = 9
-        elif self.__connection.sf >= 30000 and self.__connection.sf < 100000:   num_query_streams = 10
-        elif self.__connection.sf >= 100000:                                    num_query_streams = 11
+        if   self.__sf < 10:                            num_query_streams = 2
+        elif self.__sf >= 10 and self.__sf < 30:        num_query_streams = 3
+        elif self.__sf >= 30 and self.__sf < 100:       num_query_streams = 4
+        elif self.__sf >= 100 and self.__sf < 300:      num_query_streams = 5
+        elif self.__sf >= 300 and self.__sf < 1000:     num_query_streams = 6
+        elif self.__sf >= 1000 and self.__sf < 3000:    num_query_streams = 7
+        elif self.__sf >= 3000 and self.__sf < 10000:   num_query_streams = 8
+        elif self.__sf >= 10000 and self.__sf < 30000:  num_query_streams = 9
+        elif self.__sf >= 30000 and self.__sf < 100000: num_query_streams = 10
+        elif self.__sf >= 100000:                       num_query_streams = 11
 
         rnd_query_streams_idxs = rnd.sample(range(1, len(self.__df_queries_idxs)), num_query_streams)         
         processes = []
@@ -209,7 +203,6 @@ class Benchmark:
 
             qphH = math.pow((power_metric * throughput_metric), 0.5)
             print("--- QphH@SIZE METRIC: {0:.5} ---\n".format(qphH))
-
     def __parallel_query_running(self, query_stream):
         indexes_per_query_stream = self.__df_queries_idxs.loc[query_stream, :len(self.__pwrtest_query_times)-1].values
         print("Running queries {0} of Query Stream {1}".format(indexes_per_query_stream, query_stream+1))
@@ -227,11 +220,9 @@ class Benchmark:
             print("\n--- Query {0} of Query Stream {1} finished after {2:.5} seconds ---\n".format(indexes_per_query_stream[i], query_stream+1, running_time))
 
         print("\nRunning Refresh Function 1 of Query Stream {0}\n".format(query_stream+1))
-        self.__connection.run_command("call refresh_function1({0})".format(self.__connection.sf), cursor)
+        self.__connection.run_command("call refresh_function1({0})".format(self.__sf), cursor)
         print("\nRunning Refresh Function 2 of Query Stream {0}\n".format(query_stream+1))
-        self.__connection.run_command("call refresh_function2({0})".format(self.__connection.sf), cursor)        
+        self.__connection.run_command("call refresh_function2({0})".format(self.__sf), cursor)        
 
         cursor.close()
         con.close()
-
-

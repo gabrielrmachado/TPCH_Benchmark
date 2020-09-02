@@ -3,13 +3,12 @@ from mysql.connector import pooling
 import time
 
 class MySQL_TPCH:    
-    def __init__(self, host, user, password, database_name, sf):
+    def __init__(self, host, user, password, database_name):
       self.__connection = mysql.connect(host = host, user = user, password = password, allow_local_infile = True)
       self.database_name = database_name
       self.__host = host
       self.__user = user
       self.__password = password
-      self.sf = sf
 
     def connect_database(self, database_name = ""):
       if database_name == "": database_name = self.database_name
@@ -30,33 +29,23 @@ class MySQL_TPCH:
     def run_command(self, command, cursor = None):
       if cursor == None:
         cursor = self.__cursor
-      
-      try:
-        # cursor.execute(command)
-        # result = cursor.fetchall()
-        # if (len(result) > 0):
-        #   for r in result:
-        #     print(r)
         
-        res = cursor.execute(command, multi=True)
-        for q in res:
+      r = cursor.execute(command, multi=True)
+
+      for res in r:
+        try:
           result = cursor.fetchall()
           if (len(result) > 0):
             for r in result:
               print(r)
 
-      except mysql.errors.InterfaceError:
-        print("Command executed without fetchs.\n")
-        
-      except mysql.errors.IntegrityError as e:
-        if type(e).__name__ == "1062" or type(e).__name__ == "23000":
-          cursor.execute("call refresh_function2({0});".format(self.sf))
-          return False
+        except mysql.errors.InterfaceError:
+          print("Command executed without fetchs.\n")
 
-      except:
-          return False
-      
-      return True
+        except mysql.errors.InternalError as e:
+          if type(e).__name__ == "1213" or type(e).__name__ == "40001":
+            time.sleep(2)
+            cursor.execute(command, multi=True)
 
     def getPoolConnection(self):
       return pooling.MySQLConnectionPool(pool_size=1, pool_name="mysqlpool", host=self.__host, database=self.database_name, user=self.__user, password=self.__password).get_connection()
