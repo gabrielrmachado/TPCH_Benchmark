@@ -127,15 +127,17 @@ class Benchmark:
         self.__pwrtest_refresh_times = []
         self.__df_queries_idxs = pd.read_csv("queries/queries_rnd_idxs.csv", header=None, delim_whitespace=True)
         idxs = self.__df_queries_idxs.loc[[0]] # The index '0' refers to 'Query Stream 00', according to TPC-H nomenclature.
-        print(len(idxs.loc[0].values))
         
         i = 1
         running_time = time.time()
         self.__power_test_time = running_time
 
-        self.__connection.run_command("call refresh_function1({0});".format(self.__sf))
+        ans = self.__connection.run_command("call refresh_function1({0})".format(self.__sf))
+        while ans == 2:
+            ans = self.__connection.run_command("call refresh_function1({0})".format(self.__sf))     
+
         self.__pwrtest_refresh_times.append(time.time() - running_time)
-        print("\nRefresh Function 2 finished after {0:.5} seconds.".format(self.__pwrtest_refresh_times[0]))
+        print("\nRefresh Function 1 finished after {0:.5} seconds.".format(self.__pwrtest_refresh_times[0]))
 
         while i <= len(idxs.loc[0].values):
         # while i <= 5:
@@ -203,6 +205,7 @@ class Benchmark:
 
             qphH = math.pow((power_metric * throughput_metric), 0.5)
             print("--- QphH@SIZE METRIC: {0:.5} ---\n".format(qphH))
+
     def __parallel_query_running(self, query_stream):
         indexes_per_query_stream = self.__df_queries_idxs.loc[query_stream, :len(self.__pwrtest_query_times)-1].values
         print("Running queries {0} of Query Stream {1}".format(indexes_per_query_stream, query_stream+1))
