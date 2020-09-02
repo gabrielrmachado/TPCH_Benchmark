@@ -220,7 +220,11 @@ class Benchmark:
             print("\n--- Query {0} of Query Stream {1} finished after {2:.5} seconds ---\n".format(indexes_per_query_stream[i], query_stream+1, running_time))
 
         print("\nRunning Refresh Function 1 of Query Stream {0}\n".format(query_stream+1))
-        self.__connection.run_command("call refresh_function1({0})".format(self.__sf), cursor)
+        
+        ans = self.__connection.run_command("call refresh_function1({0})".format(self.__sf), cursor)
+        while ans == 2:
+            ans = self.__connection.run_command("call refresh_function1({0})".format(self.__sf), cursor)        
+            
         print("\nRunning Refresh Function 2 of Query Stream {0}\n".format(query_stream+1))
         self.__connection.run_command("call refresh_function2({0})".format(self.__sf), cursor)        
 

@@ -26,26 +26,34 @@ class MySQL_TPCH:
           print("Connected on database {0}.".format(database_name))        
           return True
 
-    def run_command(self, command, cursor = None):
+    def run_command(self, command, cursor = None, sf=None):
       if cursor == None:
         cursor = self.__cursor
-        
-      r = cursor.execute(command, multi=True)
 
-      for res in r:
-        try:
-          result = cursor.fetchall()
-          if (len(result) > 0):
-            for r in result:
-              print(r)
+      try:
+        for r in cursor.execute(command, multi=True):
+            if r.with_rows:
+              result = cursor.fetchall()
+              print(result)
 
-        except mysql.errors.InterfaceError:
-          print("Command executed without fetchs.\n")
+      except mysql.errors.InterfaceError:
+        print("Command executed without fetchs.\n")
+        return 0
 
-        except mysql.errors.InternalError as e:
-          if type(e).__name__ == "1213" or type(e).__name__ == "40001":
-            time.sleep(2)
-            cursor.execute(command, multi=True)
+      except mysql.errors.InternalError as e:
+        if type(e).__name__ == "1213" or type(e).__name__ == "40001":
+          time.sleep(0.5)
+          cursor.execute(command, multi=True)
+          return 1
+
+      except mysql.errors.IntegrityError as e:
+        if type(e).__name__ == "1062" or type(e).__name__ == "23000":
+          print("\nDuplicated primary key. Restarting command...")
+          time.sleep(0.5)
+          cursor.execute("call refresh_function2({0})".format(sf))
+          return 2
+
+      return 0
 
     def getPoolConnection(self):
       return pooling.MySQLConnectionPool(pool_size=1, pool_name="mysqlpool", host=self.__host, database=self.database_name, user=self.__user, password=self.__password).get_connection()
