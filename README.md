@@ -44,11 +44,11 @@ In the end of execution, the script will print on screen the following metrics, 
 
 - ***Database Load Time***, measured in seconds;
 - ***Power Test Time***, measured in seconds;
-- ***Power@Size Metric***, which express, approximately, the number of queries that can be executed per hour in `SF`GB of data;
+- ***Power@Size Metric***, which express, approximately, the number of queries that can be executed per hour in *SF* GB of data;
 - ***Throughput Test Time***, measured in seconds;
 - ***Throughput@Size Metric***, which is similar to *Power@Size Metric*, however its evaluation is performed in a parallel environment;
 - ***QphH@Size Metric***, the Composite Query-Per-Hour Performance Metric, which combines the values of the corresponding metrics   *Power@Size* and *Throughput@Size* into a single metric.
 
 ## Further material
 
-For further information regarding TPC-H, it is recommended to read the paper entitled [Benchmarking with TPC-H on Off-the-Shelf Hardware: An Experiments Report](documentation/tpch_benchmark_paper.pdf). Also, an overview of the TPC-H workflow is provided [here](documentation/tpch_workflow.pdf). This file describes in a nutshell all the steps taken by the script in order to perform the benchmark.
+For further information regarding TPC-H, it is recommended to read the [TPC-H manual](documentation/tpc-h_v2.18.0.pdf) and the paper entitled [Benchmarking with TPC-H on Off-the-Shelf Hardware: An Experiments Report](documentation/tpch_benchmark_paper.pdf). Also, an overview of the TPC-H workflow is provided [here](documentation/tpch_workflow.pdf). This file describes and explains, in a nutshell, all the steps performed by the benchmark.
