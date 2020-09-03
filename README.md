@@ -4,7 +4,7 @@
 
 ## 1. Prerequisites
 
-### 1.1. Create a new MySQL user.
+### 1.1. Create a new MySQL user
 
 In Linux terminal, run the commands below in order to create the test user.
 
@@ -14,7 +14,7 @@ CREATE USER 'user'@'localhost' IDENTIFIED BY '123456';
 GRANT ALL PRIVILEGES ON * . * TO 'user'@'localhost';
 ```
 
-### 1.2. Install dependencies.
+### 1.2. Install dependencies
 
 Check whether the following libraries are already installed in you machine. If not, run the respective command of the missing library in a Linux terminal in order to install it. In case of Python3 versions, replace *pip* to *pip3*.
 
