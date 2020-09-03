@@ -50,4 +50,4 @@ In the end of execution, the script will print on screen the following metrics, 
 
 ## Further material
 
-For further information regarding TPC-H, it is recommended to read the [TPC-H manual](documentation/tpc-h_v2.18.0.pdf) and the paper entitled [Benchmarking with TPC-H on Off-the-Shelf Hardware: An Experiments Report](documentation/tpch_benchmark_paper.pdf). Also, an overview of the TPC-H workflow is provided [here](documentation/tpch_workflow.pdf). This file describes and explains, in a nutshell, all the steps performed by the benchmark.
+For further information regarding TPC-H, it is recommended to read the [TPC-H manual](documentation/tpc-h_v2.18.0.pdf) and the paper entitled [Benchmarking with TPC-H on Off-the-Shelf Hardware: An Experiments Report](documentation/tpch_benchmark_paper.pdf). Also, a brief overview of the TPC-H workflow is provided [here](documentation/tpch_workflow.pdf). This file describes and explains, in a nutshell, all the steps performed by the benchmark.
